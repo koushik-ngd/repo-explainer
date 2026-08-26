@@ -1,0 +1,103 @@
+{
+  "purpose": "Composable toolkit for creating command-line interfaces in Python with minimal code and sensible defaults.",
+  "stack": [
+    "Python"
+  ],
+  "components": [
+    {
+      "name": "Core Engine",
+      "responsibility": "Manages CLI execution contexts, command hierarchies, parameter evaluation, and command execution flow.",
+      "files": [
+        "src/click/core.py",
+        "src/click/globals.py"
+      ]
+    },
+    {
+      "name": "CLI Decorators",
+      "responsibility": "Provides user-facing decorators for defining commands, groups, options, arguments, and context bindings.",
+      "files": [
+        "src/click/decorators.py",
+        "src/click/__init__.py"
+      ]
+    },
+    {
+      "name": "Argument Parser",
+      "responsibility": "Parses raw CLI command-line argument lists into structured option and argument values.",
+      "files": [
+        "src/click/parser.py"
+      ]
+    },
+    {
+      "name": "Parameter Types",
+      "responsibility": "Converts and validates command-line input strings into custom or built-in Python data types.",
+      "files": [
+        "src/click/types.py"
+      ]
+    },
+    {
+      "name": "Terminal UI & Utilities",
+      "responsibility": "Handles interactive prompts, progress bars, ANSI text styling, pagers, and platform stream compatibility.",
+      "files": [
+        "src/click/termui.py",
+        "src/click/_termui_impl.py",
+        "src/click/utils.py",
+        "src/click/_compat.py",
+        "src/click/_winconsole.py"
+      ]
+    },
+    {
+      "name": "Help Formatter",
+      "responsibility": "Formats CLI usage documentation, option tables, and text wrapping for terminal displays.",
+      "files": [
+        "src/click/formatting.py",
+        "src/click/_textwrap.py"
+      ]
+    },
+    {
+      "name": "Shell Completion",
+      "responsibility": "Generates completion scripts and dynamically resolves completion items for supported shells.",
+      "files": [
+        "src/click/shell_completion.py"
+      ]
+    },
+    {
+      "name": "Test Runner",
+      "responsibility": "Provides isolated test environments and standard I/O redirection to test CLI applications.",
+      "files": [
+        "src/click/testing.py"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "CLI Decorators",
+      "to": "Core Engine",
+      "what": "Instantiates Command and Group objects from decorated functions"
+    },
+    {
+      "from": "Core Engine",
+      "to": "Argument Parser",
+      "what": "Passes raw string arguments for token parsing"
+    },
+    {
+      "from": "Core Engine",
+      "to": "Parameter Types",
+      "what": "Delegates parsed string values for type conversion and validation"
+    },
+    {
+      "from": "Core Engine",
+      "to": "Help Formatter",
+      "what": "Supplies command parameters and metadata to generate formatted help text"
+    },
+    {
+      "from": "Shell Completion",
+      "to": "Core Engine",
+      "what": "Navigates command trees and contexts to return completion suggestions"
+    },
+    {
+      "from": "Test Runner",
+      "to": "Core Engine",
+      "what": "Invokes CLI command hierarchies with mocked arguments and I/O streams"
+    }
+  ]
+}
