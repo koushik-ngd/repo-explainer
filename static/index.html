@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repo Explainer</title>
+<style>
+  :root { --bg:#0d1117; --card:#161b22; --line:#30363d; --fg:#e6edf3; --dim:#8b949e; --accent:#58a6ff; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:16px/1.6 ui-sans-serif,-apple-system,"Segoe UI",sans-serif; }
+  .wrap { max-width:820px; margin:0 auto; padding:48px 20px 80px; }
+  h1 { font-size:28px; font-weight:600; margin:0 0 6px; }
+  .sub { color:var(--dim); margin:0 0 28px; }
+  .bar { display:flex; gap:8px; margin-bottom:16px; }
+  input { flex:1; padding:12px 14px; background:var(--card); border:1px solid var(--line);
+          border-radius:8px; color:var(--fg); font-size:15px; }
+  input:focus { outline:none; border-color:var(--accent); }
+  button { padding:12px 22px; background:var(--accent); border:0; border-radius:8px;
+           color:#0d1117; font-weight:600; font-size:15px; cursor:pointer; }
+  button:disabled { opacity:.5; cursor:default; }
+  .examples { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:32px; }
+  .chip { padding:5px 11px; background:var(--card); border:1px solid var(--line);
+          border-radius:999px; font-size:13px; color:var(--dim); cursor:pointer; }
+  .chip:hover { border-color:var(--accent); color:var(--accent); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+          padding:22px; margin-bottom:18px; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.08em;
+       color:var(--dim); margin:0 0 14px; font-weight:600; }
+  .step { display:flex; gap:14px; padding:14px 0; border-top:1px solid var(--line); }
+  .step:first-of-type { border-top:0; }
+  .num { flex:0 0 26px; height:26px; border-radius:50%; background:var(--bg);
+         border:1px solid var(--line); display:grid; place-items:center;
+         font-size:12px; color:var(--dim); }
+  .name { font-weight:600; }
+  code { background:var(--bg); padding:2px 6px; border-radius:4px;
+         font:13px ui-monospace,monospace; color:var(--accent); }
+  .err { border-color:#f85149; color:#ff7b72; }
+  .status { color:var(--dim); font-size:14px; }
+  ol,ul { margin:0; padding-left:20px; }
+  li { margin:6px 0; }
+  .hidden { display:none; }
+  #diagram { display:flex; justify-content:center; overflow-x:auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Repo Explainer</h1>
+  <p class="sub">Paste a GitHub URL. Get the architecture and a walkthrough of how it works.</p>
+
+  <div class="bar">
+    <input id="url" placeholder="https://github.com/psf/requests" autocomplete="off">
+    <button id="go">Explain</button>
+  </div>
+
+  <div class="examples" id="examples"></div>
+
+  <div id="status" class="card status hidden"></div>
+  <div id="out"></div>
+</div>
+
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad:false, theme:'dark',
+  themeVariables:{ background:'#161b22', primaryColor:'#1f2937',
+                   primaryTextColor:'#e6edf3', lineColor:'#8b949e' } });
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+for (const r of ['psf/requests','pallets/click','expressjs/express']) {
+  const c = document.createElement('span');
+  c.className = 'chip'; c.textContent = r;
+  c.onclick = () => { $('url').value = `https://github.com/${r}`; run(); };
+  $('examples').appendChild(c);
+}
+
+async function run() {
+  const url = $('url').value.trim();
+  if (!url) return;
+
+  $('go').disabled = true;
+  $('out').innerHTML = '';
+  $('status').className = 'card status';
+  $('status').textContent = 'Cloning and analysing. First run takes 30 to 60 seconds.';
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ url })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Something went wrong');
+
+    $('status').className = 'card status hidden';
+    render(data);
+  } catch (e) {
+    $('status').className = 'card status err';
+    $('status').textContent = e.message;
+  } finally {
+    $('go').disabled = false;
+  }
+}
+
+function render(d) {
+  const m = d.map, t = d.tour;
+  const steps = t.trace.steps.map((s,i) => `
+    <div class="step">
+      <div class="num">${i+1}</div>
+      <div>
+        <div class="name">${esc(s.component)} &nbsp;<code>${esc(s.file)}</code></div>
+        <div>${esc(s.what_happens)}</div>
+      </div>
+    </div>`).join('');
+
+  $('out').innerHTML = `
+    <div class="card">
+      <h2>What it is${d.cached ? ' · cached' : ''}</h2>
+      <p style="margin:0 0 10px">${esc(m.purpose)}</p>
+      <div class="status">${m.stack.map(esc).join(' · ')}</div>
+    </div>
+    <div class="card"><h2>Architecture</h2><div id="diagram"></div></div>
+    <div class="card">
+      <h2>How it works</h2>
+      <p class="status" style="margin:0 0 8px">${esc(t.trace.scenario)}</p>
+      ${steps}
+    </div>
+    <div class="card"><h2>Start here</h2>
+      <ol>${t.start_here.map(f => `<li><code>${esc(f)}</code></li>`).join('')}</ol>
+    </div>
+    <div class="card"><h2>Gotchas</h2>
+      <ul>${t.gotchas.map(g => `<li>${esc(g)}</li>`).join('')}</ul>
+    </div>`;
+
+  mermaid.render('mm-' + Date.now(), t.mermaid)
+    .then(({svg}) => { $('diagram').innerHTML = svg; })
+    .catch(() => { $('diagram').innerHTML = '<span class="status">Diagram failed to render</span>'; });
+}
+
+$('go').onclick = run;
+$('url').onkeydown = e => { if (e.key === 'Enter') run(); };
+</script>
+</body>
+</html>

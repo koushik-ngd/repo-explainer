@@ -1,56 +1,59 @@
-# Composable toolkit for creating command-line interfaces in Python with minimal code and sensible defaults.
+# Provides a user-friendly, high-level HTTP client library for Python applications.
 
-**Stack:** Python
+**Stack:** Python, urllib3, certifi, charset_normalizer, idna, pytest
 
 ## Architecture
 
 ```mermaid
 graph TD
-  CD[CLI Decorators] --> CE[Core Engine]
-  CE --> AP[Argument Parser]
-  CE --> PT[Parameter Types]
-  CE --> HF[Help Formatter]
-  SC[Shell Completion] --> CE
-  TR[Test Runner] --> CE
-  TU[Terminal UI and Utilities]
+  A[API Interface] --> B[Session Manager]
+  B --> C[Data Models]
+  B --> D[Transport Adapters]
+  D --> C[Data Models]
+  E[Authentication] --> C[Data Models]
+  F[Cookie Jar] --> C[Data Models]
 ```
 
 ## How it works
 
-*A user executes a CLI command with options and positional arguments from the command line.*
+*A user sends an authenticated HTTP GET request using requests.get with basic authentication.*
 
-**1. CLI Decorators** — `src/click/decorators.py`
+**1. API Interface** — `src/requests/api.py`
 
-The user defines a Python command function annotated with decorators like command and option. These decorators wrap the underlying callback function into a Command object populated with Option metadata.
+The user invokes requests.get which creates an ad-hoc Session instance. It immediately delegates the HTTP method and parameters to Session.request.
 
-**2. Core Engine** — `src/click/core.py`
+**2. Session Manager** — `src/requests/sessions.py`
 
-The entry script calls the command object, which instantiates an execution Context for the run. This context manages raw argument lists, flag parsing state, and parent-child command relationships.
+The session creates an unprepared Request object with the target URL and credentials. It then passes this object through prepare_request to produce a PreparedRequest.
 
-**3. Argument Parser** — `src/click/parser.py`
+**3. Data Models** — `src/requests/models.py`
 
-The command delegates raw command-line string tokens to OptionParser for structure extraction. The parser organizes short flags, long options, and positional arguments into key-value maps.
+The Request object normalizes headers, body parameters, and URL parameters into a PreparedRequest. During preparation, it delegates credential formatting and cookie assembly to auth and cookie components.
 
-**4. Parameter Types** — `src/click/types.py`
+**4. Authentication** — `src/requests/auth.py`
 
-The core engine passes each parsed string token to its corresponding ParamType instance. The type validator converts the raw string into Python objects like integers, booleans, or file paths.
+The HTTPBasicAuth handler intercepts the PreparedRequest to encode the username and password into base64. It attaches the formatted Authorization header directly onto the PreparedRequest.
 
-**5. Core Engine** — `src/click/core.py`
+**5. Cookie Jar** — `src/requests/cookies.py`
 
-The context binds converted values to keyword arguments and invokes the original user function callback. It intercepts raised Exit or ClickException instances to exit gracefully with an appropriate status code.
+The session's cookie jar searches stored cookies for matching domain and path entries. It formats matching cookies into the Cookie header and attaches them to the PreparedRequest.
 
-**6. Terminal UI & Utilities** — `src/click/termui.py`
+**6. Transport Adapters** — `src/requests/adapters.py`
 
-The executing callback prints styled output or prompts the user for input using terminal UI helpers. These helpers resolve cross-platform stream incompatibilities and apply ANSI color formatting.
+The session locates the HTTPAdapter registered for the URL scheme and calls adapter.send. The adapter manages urllib3 connection pools, sends the request over the socket, and wraps the raw response.
+
+**7. Data Models** — `src/requests/models.py`
+
+The adapter constructs a high-level Response object, attaching the raw connection stream and headers. The session updates its cookie jar with any Set-Cookie headers received before returning the Response to the user.
 
 ## Start here
 
-1. `src/click/core.py`
-2. `src/click/decorators.py`
-3. `src/click/parser.py`
+1. `src/requests/api.py`
+2. `src/requests/sessions.py`
+3. `src/requests/models.py`
 
 ## Gotchas
 
-- Context objects form a linked parent-child hierarchy during nested group execution, allowing settings and parameters to cascade dynamically down the command tree.
-- Click replaces standard system streams with custom wrappers in _compat.py and _winconsole.py to guarantee unicode and ANSI display support on Windows.
-- Control flow relies heavily on internal exceptions like Abort, Exit, and BadParameter to handle terminal control and error reporting cleanly.
+- Convenience functions like requests.get() instantiate and discard a new Session object for every single invocation, preventing connection reuse.
+- PreparedRequest objects are mutated in place during the preparation process rather than returning fresh immutable instances.
+- Transport adapters handle connection retries internally via urllib3, which transforms native socket errors into Requests exception types.
