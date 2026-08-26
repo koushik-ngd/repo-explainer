@@ -36,6 +36,7 @@ MANIFESTS = (
 ARCHITECTURAL = (
     "router", "routes", "schema", "models", "config", "settings", "middleware",
     "handler", "controller", "service", "db.", "database", "auth",
+    "core", "engine", "client", "session", "context", "decorators",
 )
 NOISE = (
     "test", "spec", "mock", "fixture", "snapshot", ".min.", ".lock",
@@ -85,8 +86,11 @@ def import_graph(files: dict) -> Counter:
     fast, language-agnostic, and good enough to surface load-bearing files.
     Upgrade to tree-sitter only if the ranking is visibly wrong.
     """
+    CODE = {".py", ".js", ".jsx", ".ts", ".tsx", ".go", ".rs", ".rb", ".java"}
     stems = {}
     for path in files:
+        if Path(path).suffix.lower() not in CODE:
+            continue
         stem = Path(path).stem
         if stem not in ("index", "__init__", "main"):
             stems.setdefault(stem, []).append(path)
@@ -118,7 +122,8 @@ def score(path: str, content: str, inbound: Counter) -> tuple:
 
     depth = name.count("/")
 
-    if base.startswith(ENTRYPOINTS):
+    in_docs = name.startswith("docs/") or "/docs/" in name
+    if base.startswith(ENTRYPOINTS) and not in_docs and Path(name).suffix != ".md":
         add(40, "entrypoint")
     if any(k in base for k in MANIFESTS):
         add(35, "manifest")
@@ -135,6 +140,8 @@ def score(path: str, content: str, inbound: Counter) -> tuple:
         add(-40, "test/noise")
     if len(content) > 60_000:
         add(-20, "very large")
+    if any(p.startswith(".") for p in name.split("/")[:-1]) or base.startswith("."):
+        add(-35, "tooling dotfile")
     if depth > 5:
         add(-10, "deeply nested")
     if len(content.strip()) < 50:
