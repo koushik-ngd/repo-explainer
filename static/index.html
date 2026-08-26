@@ -4,99 +4,232 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Repo Explainer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230F1B2A'/><path d='M11 9 L6 16 L11 23 M21 9 L26 16 L21 23' stroke='%23E8ECF1' stroke-width='2.5' fill='none' stroke-linecap='round'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#0d1117; --card:#161b22; --line:#30363d; --fg:#e6edf3; --dim:#8b949e; --accent:#58a6ff; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg);
-         font:16px/1.6 ui-sans-serif,-apple-system,"Segoe UI",sans-serif; }
-  .wrap { max-width:820px; margin:0 auto; padding:48px 20px 80px; }
-  h1 { font-size:28px; font-weight:600; margin:0 0 6px; }
-  .sub { color:var(--dim); margin:0 0 28px; }
-  .bar { display:flex; gap:8px; margin-bottom:16px; }
-  input { flex:1; padding:12px 14px; background:var(--card); border:1px solid var(--line);
-          border-radius:8px; color:var(--fg); font-size:15px; }
-  input:focus { outline:none; border-color:var(--accent); }
-  button { padding:12px 22px; background:var(--accent); border:0; border-radius:8px;
-           color:#0d1117; font-weight:600; font-size:15px; cursor:pointer; }
-  button:disabled { opacity:.5; cursor:default; }
-  .examples { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:32px; }
-  .chip { padding:5px 11px; background:var(--card); border:1px solid var(--line);
-          border-radius:999px; font-size:13px; color:var(--dim); cursor:pointer; }
-  .chip:hover { border-color:var(--accent); color:var(--accent); }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
-          padding:22px; margin-bottom:18px; }
-  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.08em;
-       color:var(--dim); margin:0 0 14px; font-weight:600; }
-  .step { display:flex; gap:14px; padding:14px 0; border-top:1px solid var(--line); }
-  .step:first-of-type { border-top:0; }
-  .num { flex:0 0 26px; height:26px; border-radius:50%; background:var(--bg);
-         border:1px solid var(--line); display:grid; place-items:center;
-         font-size:12px; color:var(--dim); }
-  .name { font-weight:600; }
-  code { background:var(--bg); padding:2px 6px; border-radius:4px;
-         font:13px ui-monospace,monospace; color:var(--accent); }
-  .err { border-color:#f85149; color:#ff7b72; }
-  .status { color:var(--dim); font-size:14px; }
-  ol,ul { margin:0; padding-left:20px; }
-  li { margin:6px 0; }
-  .hidden { display:none; }
-  #diagram { display:flex; justify-content:center; overflow-x:auto; }
+  :root{
+    --paper:#E9EDF2;
+    --panel:#F4F6F9;
+    --ink:#0F1B2A;
+    --ink-2:#4A5A6E;
+    --rule:#C0CAD7;
+    --indigo:#22468F;
+    --ochre:#8A5B10;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+    --serif:"Newsreader",Georgia,serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --paper:#0F1720; --panel:#161F2A; --ink:#E4EAF1; --ink-2:#93A2B4;
+           --rule:#2A3644; --indigo:#8FB0EE; --ochre:#D8A64A; }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);
+       font-size:17px;line-height:1.65;position:relative}
+
+  /* fixed paper: ruling stays put, content glides over it */
+  .paper{position:fixed;inset:0;z-index:-2;pointer-events:none;
+         background-image:linear-gradient(var(--rule) 1px,transparent 1px);
+         background-size:100% 64px;opacity:.55}
+  .grain{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.035;
+         background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* scroll position, as a hairline */
+  .tick{position:fixed;top:0;left:0;height:2px;width:0;background:var(--indigo);
+        z-index:10;transition:width .1s linear}
+
+  .sheet{width:100%;max-width:1100px;margin:0 auto;padding:0 48px 96px;position:relative;
+         min-height:100vh}
+  @media (max-width:700px){ .sheet{padding:0 20px 72px} }
+  .mono{font-family:var(--mono)}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+           color:var(--ink-2)}
+
+  header{padding:88px 0 48px}
+  h1{font-family:var(--mono);font-weight:600;font-size:clamp(32px,6vw,58px);
+     letter-spacing:-.02em;margin:14px 0 0;line-height:1.1}
+  h1 .cursor{display:inline-block;width:.5em;height:.9em;background:var(--indigo);
+             vertical-align:-.08em;margin-left:.12em;animation:blink 1.2s step-end infinite}
+  @keyframes blink{50%{opacity:0}}
+  .lede{color:var(--ink-2);margin:16px 0 0;max-width:56ch;font-size:19px}
+
+  .prompt{display:flex;align-items:stretch;border:1px solid var(--ink);background:var(--panel);
+          margin:32px 0 12px}
+  .prompt .sigil{font-family:var(--mono);font-size:15px;color:var(--ink-2);
+                 padding:14px 0 14px 14px;user-select:none}
+  #url{flex:1;border:0;background:transparent;font-family:var(--mono);font-size:15px;
+       color:var(--ink);padding:14px 12px;min-width:0}
+  #url:focus{outline:none}
+  #go{border:0;border-left:1px solid var(--ink);background:var(--ink);color:var(--paper);
+      font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.1em;
+      text-transform:uppercase;padding:0 22px;cursor:pointer}
+  #go:hover:not(:disabled){background:var(--indigo)}
+  #go:disabled{opacity:.45;cursor:default}
+  .prompt:focus-within{outline:2px solid var(--indigo);outline-offset:2px}
+
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-family:var(--mono);font-size:12px;color:var(--ink-2);border:1px dashed var(--rule);
+        padding:4px 9px;cursor:pointer;background:none}
+  .chip:hover{border-style:solid;border-color:var(--indigo);color:var(--indigo)}
+
+  section{border-top:1px solid var(--rule);padding:34px 0 6px;margin-top:34px}
+  section > .eyebrow{display:block;margin-bottom:18px}
+
+  .purpose{font-size:24px;line-height:1.45;margin:0 0 20px;max-width:60ch}
+  .stack{display:flex;flex-wrap:wrap;gap:6px}
+  .stack span{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);
+              border:1px solid var(--rule);padding:3px 8px}
+
+  #diagram{overflow-x:auto;padding:8px 0}
+  #diagram svg{max-width:100%;height:auto;display:block;margin:0 auto}
+
+  .scenario{font-style:italic;color:var(--ink-2);margin:0 0 26px;padding-left:18px;
+            border-left:2px solid var(--indigo)}
+
+  .rail{list-style:none;margin:0;padding:0;position:relative}
+  .rail::before{content:"";position:absolute;left:13px;top:6px;bottom:22px;
+                width:1px;background:var(--rule)}
+  .rail li{position:relative;padding:0 0 30px 52px}
+  .rail .n{position:absolute;left:0;top:1px;width:27px;height:27px;border:1px solid var(--rule);
+           background:var(--paper);font-family:var(--mono);font-size:12px;color:var(--ink-2);
+           display:grid;place-items:center}
+  .rail .who{font-family:var(--mono);font-size:13.5px;font-weight:600;letter-spacing:-.01em}
+  .rail .path{font-family:var(--mono);font-size:12px;color:var(--indigo);word-break:break-all;
+              display:block;margin:2px 0 8px}
+  .rail p{margin:0;color:var(--ink);max-width:72ch}
+
+  ol.files{list-style:none;counter-reset:f;margin:0;padding:0}
+  ol.files li{counter-increment:f;font-family:var(--mono);font-size:13.5px;padding:9px 0;
+              border-bottom:1px solid var(--rule);display:flex;gap:14px}
+  ol.files li::before{content:counter(f,decimal-leading-zero);color:var(--ink-2);font-size:11.5px}
+  ol.files li:last-child{border-bottom:0}
+
+  ul.notes{list-style:none;margin:0;padding:0}
+  ul.notes li{position:relative;padding:0 0 16px 26px;max-width:78ch}
+  ul.notes li::before{content:"!";position:absolute;left:0;top:0;font-family:var(--mono);
+                      font-weight:600;color:var(--ochre)}
+
+  .status{font-family:var(--mono);font-size:13px;color:var(--ink-2);padding:26px 0;
+          border-top:1px solid var(--rule);margin-top:34px}
+  .status.error{color:#B3261E;border-color:#B3261E}
+  @media (prefers-color-scheme:dark){.status.error{color:#F2A9A2;border-color:#F2A9A2}}
+  .stages{margin:14px 0 0;padding:0;list-style:none}
+  .stages li{padding:3px 0;opacity:.35;transition:opacity .3s}
+  .stages li.on{opacity:1;color:var(--ink)}
+  .stages li.on::after{content:" ...";}
+  .stages li.done{opacity:.65}
+  .stages li.done::after{content:" ok";color:var(--indigo)}
+
+  .cached{float:right;color:var(--indigo);letter-spacing:.14em}
+  .hidden{display:none}
+  .reveal{opacity:0;transform:translateY(6px);animation:in .45s ease forwards}
+  @keyframes in{to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .reveal{animation:none;opacity:1;transform:none}
+    h1 .cursor{animation:none}
+    .tick{transition:none}
+  }
+  footer{border-top:1px solid var(--rule);margin-top:44px;padding-top:18px}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Repo Explainer</h1>
-  <p class="sub">Paste a GitHub URL. Get the architecture and a walkthrough of how it works.</p>
+<div class="paper"></div>
+<div class="grain"></div>
+<div class="tick" id="tick"></div>
+<div class="sheet">
 
-  <div class="bar">
-    <input id="url" placeholder="https://github.com/psf/requests" autocomplete="off">
-    <button id="go">Explain</button>
-  </div>
+  <header>
+    <span class="eyebrow">Repo Explainer</span>
+    <h1>Every codebase<br>has a shape<span class="cursor"></span></h1>
+    <p class="lede">Paste a public GitHub repo. Get its architecture and a walkthrough of what
+       actually happens when someone uses it.</p>
 
-  <div class="examples" id="examples"></div>
+    <div class="prompt">
+      <span class="sigil">git://</span>
+      <input id="url" placeholder="github.com/psf/requests" autocomplete="off" spellcheck="false"
+             aria-label="GitHub repository URL">
+      <button id="go">Explain</button>
+    </div>
+    <div class="chips" id="chips"></div>
+  </header>
 
-  <div id="status" class="card status hidden"></div>
-  <div id="out"></div>
+  <div id="status" class="status hidden" role="status" aria-live="polite"></div>
+  <main id="out"></main>
+
+  <footer class="eyebrow">Reads the 25 files that matter most, not all of them.</footer>
 </div>
 
 <script type="module">
 import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
-mermaid.initialize({ startOnLoad:false, theme:'dark',
-  themeVariables:{ background:'#161b22', primaryColor:'#1f2937',
-                   primaryTextColor:'#e6edf3', lineColor:'#8b949e' } });
+
+const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+mermaid.initialize({
+  startOnLoad:false, theme:'base',
+  fontFamily:'"IBM Plex Mono", monospace',
+  themeVariables:{
+    fontSize:'13px',
+    background: dark ? '#0F1720' : '#E9EDF2',
+    primaryColor: dark ? '#161F2A' : '#F4F6F9',
+    primaryTextColor: dark ? '#E4EAF1' : '#0F1B2A',
+    primaryBorderColor: dark ? '#2A3644' : '#C0CAD7',
+    lineColor: dark ? '#8FB0EE' : '#22468F',
+  }
+});
 
 const $ = id => document.getElementById(id);
-const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
 for (const r of ['psf/requests','pallets/click','expressjs/express']) {
-  const c = document.createElement('span');
-  c.className = 'chip'; c.textContent = r;
-  c.onclick = () => { $('url').value = `https://github.com/${r}`; run(); };
-  $('examples').appendChild(c);
+  const b = document.createElement('button');
+  b.className = 'chip'; b.textContent = r;
+  b.onclick = () => { $('url').value = 'https://github.com/' + r; run(); };
+  $('chips').appendChild(b);
 }
 
+const STAGES = ['Cloning the repository','Ranking files by importance',
+                'Mapping components','Tracing a request'];
+let timer;
+
+function startStages(){
+  $('status').className = 'status';
+  $('status').innerHTML = 'Working. A first run takes 30 to 60 seconds.' +
+    '<ul class="stages">' + STAGES.map(s=>`<li>${s}</li>`).join('') + '</ul>';
+  const items = $('status').querySelectorAll('.stages li');
+  let i = 0;
+  items[0].classList.add('on');
+  timer = setInterval(() => {
+    if (i >= items.length - 1) return;
+    items[i].classList.remove('on'); items[i].classList.add('done');
+    items[++i].classList.add('on');
+  }, 9000);
+}
+
+function stopStages(){ clearInterval(timer); }
+
 async function run() {
-  const url = $('url').value.trim();
-  if (!url) return;
+  const raw = $('url').value.trim();
+  if (!raw) return;
+  const url = raw.startsWith('http') ? raw : 'https://' + raw;
 
   $('go').disabled = true;
   $('out').innerHTML = '';
-  $('status').className = 'card status';
-  $('status').textContent = 'Cloning and analysing. First run takes 30 to 60 seconds.';
+  startStages();
 
   try {
     const res = await fetch('/api/analyze', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ url })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Something went wrong');
-
-    $('status').className = 'card status hidden';
+    if (!res.ok) throw new Error(data.detail || 'That did not work. Check the URL and try again.');
+    stopStages();
+    $('status').className = 'status hidden';
     render(data);
   } catch (e) {
-    $('status').className = 'card status err';
+    stopStages();
+    $('status').className = 'status error';
     $('status').textContent = e.message;
   } finally {
     $('go').disabled = false;
@@ -105,41 +238,59 @@ async function run() {
 
 function render(d) {
   const m = d.map, t = d.tour;
+
   const steps = t.trace.steps.map((s,i) => `
-    <div class="step">
-      <div class="num">${i+1}</div>
-      <div>
-        <div class="name">${esc(s.component)} &nbsp;<code>${esc(s.file)}</code></div>
-        <div>${esc(s.what_happens)}</div>
-      </div>
-    </div>`).join('');
+    <li>
+      <span class="n">${String(i+1).padStart(2,'0')}</span>
+      <span class="who">${esc(s.component)}</span>
+      <span class="path">${esc(s.file)}</span>
+      <p>${esc(s.what_happens)}</p>
+    </li>`).join('');
 
   $('out').innerHTML = `
-    <div class="card">
-      <h2>What it is${d.cached ? ' · cached' : ''}</h2>
-      <p style="margin:0 0 10px">${esc(m.purpose)}</p>
-      <div class="status">${m.stack.map(esc).join(' · ')}</div>
-    </div>
-    <div class="card"><h2>Architecture</h2><div id="diagram"></div></div>
-    <div class="card">
-      <h2>How it works</h2>
-      <p class="status" style="margin:0 0 8px">${esc(t.trace.scenario)}</p>
-      ${steps}
-    </div>
-    <div class="card"><h2>Start here</h2>
-      <ol>${t.start_here.map(f => `<li><code>${esc(f)}</code></li>`).join('')}</ol>
-    </div>
-    <div class="card"><h2>Gotchas</h2>
-      <ul>${t.gotchas.map(g => `<li>${esc(g)}</li>`).join('')}</ul>
-    </div>`;
+    <section class="reveal">
+      <span class="eyebrow">What it is${d.cached ? '<span class="cached">cached</span>' : ''}</span>
+      <p class="purpose">${esc(m.purpose)}</p>
+      <div class="stack">${m.stack.map(s=>`<span>${esc(s)}</span>`).join('')}</div>
+    </section>
 
-  mermaid.render('mm-' + Date.now(), t.mermaid)
+    <section class="reveal" style="animation-delay:.06s">
+      <span class="eyebrow">Architecture</span>
+      <div id="diagram"></div>
+    </section>
+
+    <section class="reveal" style="animation-delay:.12s">
+      <span class="eyebrow">What happens when you use it</span>
+      <p class="scenario">${esc(t.trace.scenario)}</p>
+      <ol class="rail">${steps}</ol>
+    </section>
+
+    <section class="reveal" style="animation-delay:.18s">
+      <span class="eyebrow">Read these first</span>
+      <ol class="files">${t.start_here.map(f=>`<li><span>${esc(f)}</span></li>`).join('')}</ol>
+    </section>
+
+    <section class="reveal" style="animation-delay:.24s">
+      <span class="eyebrow">Worth knowing</span>
+      <ul class="notes">${t.gotchas.map(g=>`<li>${esc(g)}</li>`).join('')}</ul>
+    </section>`;
+
+  mermaid.render('mm' + Date.now(), t.mermaid)
     .then(({svg}) => { $('diagram').innerHTML = svg; })
-    .catch(() => { $('diagram').innerHTML = '<span class="status">Diagram failed to render</span>'; });
+    .catch(() => {
+      $('diagram').innerHTML =
+        '<p class="eyebrow">The diagram could not be drawn for this repo.</p>';
+    });
 }
 
 $('go').onclick = run;
 $('url').onkeydown = e => { if (e.key === 'Enter') run(); };
+
+const tick = $('tick');
+addEventListener('scroll', () => {
+  const max = document.body.scrollHeight - innerHeight;
+  tick.style.width = (max > 40 ? (scrollY / max) * 100 : 0) + '%';
+}, { passive:true });
 </script>
 </body>
 </html>

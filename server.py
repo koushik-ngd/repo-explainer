@@ -24,7 +24,7 @@ from analyze import build_prompt, call, pick_models
 from rank import collect, import_graph, score
 from tour import PROMPT as TOUR_PROMPT
 
-DB = "cache.db"
+DB = os.environ.get("CACHE_DB", "cache.db")
 MAX_FILES = 5000
 
 app = FastAPI(title="repo-explainer")
