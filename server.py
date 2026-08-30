@@ -12,10 +12,11 @@ import re
 import shutil
 import sqlite3
 import subprocess
+import time
 import tempfile
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -26,6 +27,39 @@ from tour import PROMPT as TOUR_PROMPT
 
 DB = os.environ.get("CACHE_DB", "cache.db")
 MAX_FILES = 5000
+
+# rate limits
+PER_IP_PER_HOUR = 5          # fresh analyses per visitor per hour
+GLOBAL_PER_HOUR = 60         # total fresh analyses per hour, protects the API quota
+
+_hits: dict[str, list[float]] = {}
+_global: list[float] = []
+
+
+def check_limits(ip: str) -> None:
+    """Cached results are free. Only fresh analyses count against the limits."""
+    now = time.time()
+    cutoff = now - 3600
+
+    _global[:] = [t for t in _global if t > cutoff]
+    if len(_global) >= GLOBAL_PER_HOUR:
+        raise HTTPException(
+            429, "This tool is at its hourly limit. Try again in a bit."
+        )
+
+    seen = [t for t in _hits.get(ip, []) if t > cutoff]
+    if len(seen) >= PER_IP_PER_HOUR:
+        wait = int((seen[0] + 3600 - now) / 60) + 1
+        raise HTTPException(
+            429, f"You have hit the limit of {PER_IP_PER_HOUR} repos per hour. "
+                 f"Try again in {wait} minutes. Repos analysed before are still instant."
+        )
+
+    if len(_hits) > 2000:                      # keep the dict from growing forever
+        _hits.clear()
+    _hits.setdefault(ip, []).clear() or _hits[ip].extend(seen)
+    _hits[ip].append(now)
+    _global.append(now)
 
 app = FastAPI(title="repo-explainer")
 
@@ -74,7 +108,7 @@ def clean_json(raw: str) -> dict:
 
 
 @app.post("/api/analyze")
-def analyze(req: AnalyzeReq):
+def analyze(req: AnalyzeReq, request: Request):
     key = os.environ.get("GEMINI_API_KEY")
     if not key:
         raise HTTPException(500, "GEMINI_API_KEY not set on the server")
@@ -87,6 +121,10 @@ def analyze(req: AnalyzeReq):
     if row:
         conn.close()
         return {"cached": True, "sha": sha, **json.loads(row[0])}
+
+    fwd = request.headers.get("x-forwarded-for", "")
+    ip = fwd.split(",")[0].strip() or (request.client.host if request.client else "unknown")
+    check_limits(ip)
 
     tmp = tempfile.mkdtemp()
     try:

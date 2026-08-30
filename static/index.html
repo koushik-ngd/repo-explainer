@@ -223,6 +223,7 @@ async function run() {
       body: JSON.stringify({ url })
     });
     const data = await res.json();
+    if (res.status === 429) throw new Error(data.detail || 'Rate limit reached. Try again shortly.');
     if (!res.ok) throw new Error(data.detail || 'That did not work. Check the URL and try again.');
     stopStages();
     $('status').className = 'status hidden';
